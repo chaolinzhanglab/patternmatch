@@ -9,11 +9,11 @@ LIBS =  -lpopt -lm  #-lefence
 CC = gcc
 CPP = g++
 DEBUGFLAGS = -Wall -g
-CFLAGS = #-O2
+CFLAGS = -static #-O2
 MAIN = main.cpp
 
 $(NAME):	$(MAIN)
-	$(CPP) $(DEBUGFLAGS) $(CFLAGS) -o $(NAME) $(MAIN) $(LIBS) -L$(LIBDIR) -I$(INCLUDEDIR)
+	$(CPP) -static $(DEBUGFLAGS) $(CFLAGS) -o $(NAME) $(MAIN) $(LIBS) -L$(LIBDIR) -I$(INCLUDEDIR)
 
 install:	$(NAME)
 	cp $(NAME) $(BINDIR)

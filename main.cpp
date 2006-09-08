@@ -16,11 +16,11 @@
 #include <sys/stat.h>
 
 /* THIS PROGRAM REQUIRES THE "GNU Scientific Ligrary"  */
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
+//#include <gsl/gsl_rng.h>
+//#include <gsl/gsl_randist.h>
 
 
-#include <FastaFile.hpp>
+#include "FastaFile.hpp"
 
 using namespace std;
 
@@ -163,7 +163,7 @@ int main(int argc, char **argv) {
   
   /***************** GET COMMAND LINE ARGUMENTS *******************/
   optCon = poptGetContext("storm", argc, (const char **)argv, optionsTable, 0);
-  poptSetOtherOptionHelp(optCon, "motifs-file-name");
+  poptSetOtherOptionHelp(optCon, "fasta-file");
   if (argc < 2) {
     poptPrintUsage(optCon, stderr, 0);
     exit(EXIT_SUCCESS);
