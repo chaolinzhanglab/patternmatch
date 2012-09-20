@@ -1,5 +1,8 @@
 #include "FastaFile.hpp"
 
+//This is adapted from the implementation 
+//of Andrew Smith (http://http://smithlab.usc.edu/plone)
+
 static char btoc[26] = {
 		//A,  b,  C,  d,  e,  f,  g,  h,  i,  j,  k,  l,  m,  n,  o,  p,  q,  r,  s,  T,  u,  v,  w,  x,  y,  z
 			'T','N','G','N','N','N','C','N','N','N','N','N','N','N','N','N','N','N','N','A','N','N','N','N','N','N'};

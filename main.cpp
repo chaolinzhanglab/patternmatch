@@ -31,6 +31,7 @@ static const int alphabet_size = 4;
 /* INPUT PARAMETERS */
 const char *sequences_file_name = static_cast <const char *>(0); // file containing foreground sequences
 const char *motif_consensus = static_cast <const char *>(0);
+const char *motif_list_file_name = static_cast <const char *>(0); // specify motif consensus or a file with motif concensus
 int mismatch_threshold = 0;
 
 const char *output_file_name = static_cast<const char *>(0);        // file in which to print output
@@ -73,6 +74,7 @@ poptContext optCon = NULL;
 static struct poptOption optionsTable[] = {
   { "motif-consensus", 'c', POPT_ARG_STRING, &motif_consensus, 0, "the consensus sequence of motif" },
   { "number-of-mismatches", 'm', POPT_ARG_INT, &mismatch_threshold, 0, "number of mismatches allowed" },
+  { "motif-list-file", 'l', POPT_ARG_STRING, &motif_list_file_name, 0, "motif list file name" },
   { "both-strands", 'b', POPT_ARG_NONE, &use_both_strands, 0, "Search both strands" },
   { "ignore-repeat", 'i', POPT_ARG_NONE, &ignore_repeat, 0, "Ignore repeat (in small letters)"},
   { "verbose", 'v', POPT_ARG_NONE, &verbose, 0, "Verbose mode" },
@@ -135,7 +137,7 @@ size_t CountMisMatchFast (string target, string motif, size_t mismatch_threshold
 	//transform (motif.begin (), motif.end (), motif.begin(), ::toupper);
 	if (target.size() != w)
 	{
-		cerr << "the length of the motif is wrong" << endl;
+		cerr << "the length of the motif is wrong:" << target << endl;
 		exit (EXIT_FAILURE);
 	}
 
@@ -194,48 +196,170 @@ int main(int argc, char **argv) {
   vector<string> sequence_names = faa.GetNames();
   vector<string> sequences = faa.GetSequences();
   size_t num_seq = sequence_names.size();
-  string motif = motif_consensus;
-  transform (motif.begin (), motif.end (), motif.begin(), ::toupper);	
-  //this is necessary because the subroutine reverse_complement can not handle small letters
-  size_t motif_width = motif.size ();
-  
-  string motif_rc = reverse_complement (motif);
-  
-  for (size_t i = 0; i < num_seq; ++i){
-	string name = sequence_names[i];
-	string seq = sequences[i];
-	
-	if (verbose & i % 500 == 0)
-		cerr << "processing # " << i << ":" << name << endl; 
-	
-	size_t len = seq.size ();
-	for (size_t j = 0; j < len - motif_width + 1; ++j)
-	{
-		string target = seq.substr (j, motif_width);
-		string target2 = target;
-		if (!ignore_repeat)
-			transform (target2.begin (), target2.end (), target2.begin(), ::toupper);
-		
-		size_t mismatch = CountMisMatchFast (target2, motif, mismatch_threshold);
-		if (mismatch <= (size_t)mismatch_threshold)
-		{
-			//transform (target.begin (), target.end (), target.begin(), ::toupper);
-			cout << name << "\t" << j << "\tf\t" << mismatch << "\t" << target << "\t" << target << endl;
-		}
 
-		if (use_both_strands == 0)
+  //read motif list if the file is specified
+  vector<pair<string,int> > motif_list;
+  
+  if (motif_list_file_name != 0)
+  {
+	if (verbose)
+		cerr << "reading motifs from " << motif_list_file_name << "..." << endl;
+	ifstream in (motif_list_file_name);
+	if (!in)
+	{
+		cerr << "cannot open motif list file " << motif_list_file_name << endl;
+		exit (1);
+	}
+
+	string line;
+	while (!in.eof())
+	{
+		getline (in, line);
+		if (line.empty())
 			continue;
+
+		//still empty lines
+		int pos = line.find_first_not_of("\t ");
+		if (pos < 0)
+			continue;
+
+		//read motif concensus and mismatches
+		pos = line.find_first_of("\t ");
+		if (pos < 0)
+			cerr << "each line of the motif list file must be concensus<space or tab>mismatch" << endl;
+
+		pair<string,int> motif_info;
+		motif_info.first = line.substr(0, pos);
+		motif_info.second = atoi (line.substr(pos+1).c_str());
+		motif_list.push_back (motif_info);
+
+		//cerr << "motif " << motif_iter++ << ":" << motif.first << "\tmismatch=" << motif.second << endl;
+	}
+  }
+  else
+  {
+	//get motif from the command line
+	if (motif_consensus == 0)
+	{
+		cerr << "motif must be provided either in the command line or in a file" << endl;
+		exit (1);
+	}
+	pair<string,int> motif_info;
+	motif_info.first = motif_consensus;
+	motif_info.second = mismatch_threshold;
+	motif_list.push_back (motif_info);
+  }
+
+  //now ready to search motif
+  //ostringstream buffer;
+  ofstream out;
+  if (output_file_name != static_cast<char *> (0))
+  {
+	//ofstream out;
+	out.open (const_cast<char *>(output_file_name));
+	//out << buffer.str ();
+	//out.close();	
+  }
+ 
+
+  for (size_t m = 0; m < motif_list.size(); m++)
+  {
+	pair<string,int> motif_info = motif_list[m];
+	string motif = motif_info.first;
+	int mismatch_threshold = motif_info.second;
+
+    transform (motif.begin (), motif.end (), motif.begin(), ::toupper);	
+    //this is necessary because the subroutine reverse_complement can not handle small letters
+    size_t motif_width = motif.size ();
+  
+  	string motif_rc = reverse_complement (motif);
+ 	if (verbose)
+		cerr << "\n\n##search for motif # " << m << ": " << motif << " ..." << endl;
+  	for (size_t i = 0; i < num_seq; ++i)
+	{
+		string name = sequence_names[i];
+		string seq = sequences[i];
 	
-		//the negative strand		
-		mismatch = CountMisMatchFast (target2, motif_rc, mismatch_threshold);
-		
-		if (mismatch <= (size_t)mismatch_threshold)
+		if (verbose & (i % 500 == 0))
+			cerr << "processing sequence # " << i << ":" << name << ", size=" << seq.size () << endl; 
+	
+		size_t len = seq.size ();
+		if (len < motif_width)
+			continue;
+
+
+		for (size_t j = 0; j < len - motif_width + 1; ++j)
 		{
-			//transform (target.begin (), target.end (), target.begin(),::toupper);
-			cout << name << "\t" << j << "\tr\t" << mismatch << "\t" << target << "\t" << reverse_complement (target) << endl;
+			string target = seq.substr (j, motif_width);
+			string target2 = target;
+			if (!ignore_repeat)
+				transform (target2.begin (), target2.end (), target2.begin(), ::toupper);
+		
+			size_t mismatch = CountMisMatchFast (target2, motif, mismatch_threshold);
+			if (mismatch <= (size_t)mismatch_threshold)
+			{
+				//transform (target.begin (), target.end (), target.begin(), ::toupper);
+				if (output_file_name != static_cast<char *> (0))
+				{
+					out << name << "\t" 
+						<< j << "\t"
+						<< (j + motif_width) << "\t"
+				   		<< motif << ":" << target << "\t"
+						<< mismatch << "\t"
+						<< "+" << endl;
+				}
+				else
+				{
+					cout << name << "\t" 
+						<< j << "\t"
+						<< (j + motif_width) << "\t"
+					   	<< motif << ":" << target << "\t"
+						<< mismatch << "\t"
+						<< "+" << endl;
+				}
+			}
+
+			if (use_both_strands == 0)
+				continue;
+	
+			//the negative strand		
+			mismatch = CountMisMatchFast (target2, motif_rc, mismatch_threshold);
+		
+			if (mismatch <= (size_t)mismatch_threshold)
+			{
+				//transform (target.begin (), target.end (), target.begin(),::toupper);
+			
+				if (output_file_name != static_cast<char *> (0))
+				{
+					out << name << "\t" 
+						<< j << "\t"
+						<< (j + motif_width) << "\t"
+				   		<< motif << ":" << reverse_complement (target) << "\t"
+						<< mismatch << "\t"
+						<< "-" << endl;
+				}
+				else
+				{
+					cout << name << "\t" 
+						<< j << "\t"
+						<< (j + motif_width) << "\t"
+					   	<< motif << ":" << reverse_complement (target) << "\t"
+						<< mismatch << "\t"
+						<< "-" << endl;
+				}
+			}
 		}
 	}
   }
-  
+
+  if (output_file_name != static_cast<char *> (0))
+  {
+	out.close();	
+  }
+  //else
+  //{
+	//cout << buffer.str ();
+  //}
   return EXIT_SUCCESS;
 }
+

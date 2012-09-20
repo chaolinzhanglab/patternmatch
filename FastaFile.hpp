@@ -15,6 +15,9 @@
 #include <ctime>
 #include <cstdlib>
 
+//This is adapted from the implementation 
+//of Andrew Smith (http://http://smithlab.usc.edu/plone)
+
 
 using namespace std;
 
@@ -84,7 +87,7 @@ FastaFile::operator=(const FastaFile &ff) {
 }
 
 void FastaFile::ReadFile() {
-  char buffer[buffer_size];
+  //char buffer[buffer_size];
 
   ifstream in(filename.c_str());
   if (!in) {
@@ -92,19 +95,23 @@ void FastaFile::ReadFile() {
     exit(1);
   }
 
-  string s, name = "", desc = "";
+  string line, s, name = "", desc = "";
   bool first_line = true;
   while (!in.eof()) {
-    in.getline(buffer, buffer_size);
-    if (buffer[0] == '>') {
+	getline (in, line);
+
+	//in.getline(buffer, buffer_size);
+	const char* line_str = line.c_str();
+	if (line_str[0] == '>') {
       if (first_line == false && s.length() > 0) {
 	names.push_back(name);
 	descs.push_back(desc);
 	sequences.push_back(s);
       }
       else first_line = false;
-      string str = buffer;
-	  str = str.substr(str.find_first_not_of(">\t "));
+		
+	  //string str = buffer;
+	  string str = line.substr(line.find_first_not_of(">\t "));
 	  //cout << str << endl;
 	  int pos = str.find_first_of(">\t ");	  
 	  if (pos < 0){// no description
@@ -116,7 +123,7 @@ void FastaFile::ReadFile() {
 	  }
       s = "";
     }
-    else s += buffer;
+    else s += line;
   }
   if (!first_line && s.length() > 0) {
     names.push_back(name);
