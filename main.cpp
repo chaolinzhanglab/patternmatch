@@ -163,8 +163,8 @@ int main(int argc, char **argv) {
   char c;
   
   /***************** GET COMMAND LINE ARGUMENTS *******************/
-  optCon = poptGetContext("storm", argc, (const char **)argv, optionsTable, 0);
-  poptSetOtherOptionHelp(optCon, "fasta-file");
+  optCon = poptGetContext("PatternMatch", argc, (const char **)argv, optionsTable, 0);
+  poptSetOtherOptionHelp(optCon, "fasta-file(.gz)");
   if (argc < 2) {
     poptPrintUsage(optCon, stderr, 0);
     exit(EXIT_SUCCESS);
