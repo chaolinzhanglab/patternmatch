@@ -1,5 +1,7 @@
 #include "FastaFile.hpp"
 
+#include "gzstream.h"
+
 //This is adapted from the implementation 
 //of Andrew Smith (http://http://smithlab.usc.edu/plone)
 
@@ -26,7 +28,9 @@ FastaFile::operator=(const FastaFile &ff) {
 void FastaFile::ReadFile() {
   char buffer[buffer_size];
 
-  ifstream in(filename.c_str());
+  //ifstream in(filename.c_str());
+	igzstream in(filename.c_str());
+
   if (!in) {
     cerr << "cannot open input file " << filename << endl;
     exit(1);
